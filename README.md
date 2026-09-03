@@ -2,6 +2,8 @@
 
 AK47 是一个直接运行在浏览器里的轻量原型标注工具。它通过书签代码注入浮动面板，可在网页或本地 HTML 上点选元素、记录修改意见、微调样式，并将结构化标注复制给 AI。
 
+在线使用：https://lvvvvvvvvvvvvvvvvv.github.io/ak47-prototype-annotator/
+
 ## 使用
 
 1. 打开公开页面。
