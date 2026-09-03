@@ -1,0 +1,1564 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AK47 是一个直接运行在浏览器里的轻量原型标注工具，支持点选元素、记录修改意见、微调样式并复制给 AI。">
+  <meta name="theme-color" content="#fbfbfa">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="AK47 · 原型标注工具">
+  <meta property="og:description" content="在浏览器中点选元素、标注原型并把结构化修改意见复制给 AI。">
+  <link rel="icon" type="image/png" href="assets/ak47-favicon.png">
+  <title>AK47 · 原型标注工具</title>
+  <style>
+    :root {
+      --bg: #fbfbfa;
+      --ink: #171717;
+      --muted: #696969;
+      --soft: #f0f0ed;
+      --line: #d9d9d4;
+      --panel: #ffffff;
+      --accent: #5368ff;
+      --acid: #c8ff48;
+      --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+      --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      letter-spacing: 0;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 34px 28px 88px;
+      background: var(--bg);
+    }
+
+    main {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      margin: 0 0 min(15vh, 150px);
+    }
+
+    .eyebrow img {
+      display: block;
+      width: 72px;
+      height: auto;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 900px;
+      font-size: clamp(46px, 7vw, 82px);
+      line-height: 1.02;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 870px;
+      margin: 30px 0 0;
+      color: #303030;
+      font-size: clamp(20px, 2.4vw, 30px);
+      line-height: 1.48;
+      font-weight: 450;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 34px 0 108px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .tags li {
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: #313131;
+      font: 600 12px/1.2 var(--sans);
+    }
+
+    section {
+      display: grid;
+      grid-template-columns: minmax(150px, 220px) 1fr;
+      gap: clamp(28px, 6vw, 90px);
+      margin: 0;
+      border-top: 1px solid var(--line);
+      background: transparent;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      align-self: start;
+      padding: 42px 0;
+    }
+
+    .num {
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--panel);
+      color: var(--ink);
+      font: 700 11px/1 var(--mono);
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+      font-weight: 650;
+    }
+
+    .section-body {
+      min-width: 0;
+      padding: 42px 0 72px;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: #282828;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .bookmark-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      margin: 18px 0 10px;
+    }
+
+    .bookmarklet {
+      --pull-x: 0px;
+      --pull-y: 0px;
+      display: inline-flex;
+      align-items: center;
+      gap: 13px;
+      min-height: 54px;
+      max-width: 100%;
+      padding: 0 18px;
+      border: 1px solid var(--ink);
+      border-radius: 8px;
+      background: var(--ink);
+      color: var(--panel);
+      font: 700 13px/1.25 var(--mono);
+      text-decoration: none;
+      cursor: grab;
+      user-select: none;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .14);
+      transition: transform .5s cubic-bezier(.16, 1.45, .32, 1), box-shadow .25s ease, background .25s ease;
+      isolation: isolate;
+    }
+
+    .bookmarklet:hover {
+      background: #242424;
+      transform: translateY(-2px) scale(1.015);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, .18), 0 0 0 3px var(--acid);
+    }
+
+    .bookmarklet:active {
+      cursor: grabbing;
+      transform: scale(.96, 1.04);
+    }
+
+    .weapon-mark {
+      overflow-wrap: anywhere;
+    }
+
+    .switch-mini {
+      position: relative;
+      width: 34px;
+      height: 18px;
+      border: 1px solid var(--panel);
+      border-radius: 999px;
+      flex: 0 0 auto;
+    }
+
+    .switch-mini::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--panel);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 390px;
+    }
+
+    .warn {
+      display: none;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--soft);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .warn.show {
+      display: inline-flex;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 90px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 14px;
+      font: 12px/1.55 var(--mono);
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--ink);
+      box-shadow: 0 0 0 3px rgba(83, 104, 255, .14);
+    }
+
+    button {
+      min-height: 42px;
+      border: 1px solid var(--ink);
+      border-radius: 7px;
+      background: var(--ink);
+      color: var(--panel);
+      padding: 0 14px;
+      font: 650 13px/1 var(--sans);
+      cursor: pointer;
+      transition: transform .52s cubic-bezier(.16, 1.45, .32, 1), box-shadow .2s ease;
+      will-change: transform;
+    }
+
+    button:hover {
+      box-shadow: 0 0 0 3px var(--acid), 0 8px 22px rgba(0, 0, 0, .12);
+      transform: translateY(-1px);
+    }
+
+    button.taffy-pull {
+      transition: transform .08s linear;
+      box-shadow: var(--tail-x, 0px) var(--tail-y, 0px) 0 -8px var(--accent);
+    }
+
+    button.taffy-release {
+      animation: taffySplat .56s cubic-bezier(.16, 1.45, .32, 1);
+    }
+
+    @keyframes taffySplat {
+      0% { transform: scale(.94, 1.06); }
+      48% { transform: scale(1.045, .965); }
+      100% { transform: none; }
+    }
+
+    button.secondary {
+      background: var(--panel);
+      color: var(--ink);
+    }
+
+    .steps {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: step;
+    }
+
+    .steps li {
+      counter-increment: step;
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 12px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
+      line-height: 1.75;
+    }
+
+    .steps li:last-child {
+      border-bottom: 0;
+    }
+
+    .steps li::before {
+      content: counter(step, decimal-leading-zero);
+      color: var(--ink);
+      font: 800 12px/1.7 var(--mono);
+    }
+
+    .step-copy {
+      min-width: 0;
+    }
+
+    code,
+    .key {
+      display: inline-block;
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--panel);
+      padding: 2px 7px;
+      font: 12px/1.5 var(--mono);
+      white-space: nowrap;
+      vertical-align: .08em;
+      box-shadow: 0 2px 0 var(--line);
+    }
+
+    .notes {
+      margin: 18px 0 0;
+      padding: 14px 0 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.75;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 24px 16px 54px;
+      }
+
+      .eyebrow {
+        margin-bottom: 88px;
+      }
+
+      .tags {
+        margin-bottom: 72px;
+      }
+
+      section {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+
+      .section-head {
+        padding: 28px 0 12px;
+      }
+
+      .section-body {
+        padding: 8px 0 54px;
+      }
+
+      .bookmarklet {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow"><img src="assets/ak47-logo.png" alt="AK47"></p>
+    <h1>AK47</h1>
+    <p class="lead">把一个小书签拖进浏览器书签栏，就能在任意 HTML 页面上点选元素、写修改意见、做轻量微调，并把结构化标注复制给 AI。页面文件不会被改动。</p>
+
+    <ul class="tags" aria-label="能力标签">
+      <li>单文件</li>
+      <li>支持 file://</li>
+      <li>本地保存</li>
+      <li>复制给 AI</li>
+      <li>高对比界面</li>
+    </ul>
+
+    <section>
+      <div class="section-head">
+        <span class="num">01</span>
+        <h2>安装</h2>
+      </div>
+      <div class="section-body">
+        <p><strong>方式 A：</strong>按住下面的黑色按钮，把它拖到浏览器书签栏。</p>
+        <div class="bookmark-row">
+          <a class="bookmarklet" id="bookmarklet" title="按住拖到浏览器书签栏，不要直接点击">
+            <span class="weapon-mark">▄︻┻┳═一…… ☆(&gt;○&lt;)爆头</span>
+            <span class="switch-mini" aria-hidden="true"></span>
+          </a>
+          <span class="hint">提示：没有书签栏时，Chrome / Edge 可用 <span class="key">Ctrl Shift B</span>，Mac 用 <span class="key">⌘ Shift B</span>。</span>
+          <span class="warn" id="clickWarn">请拖到书签栏使用，不是在安装页直接点击。</span>
+        </div>
+
+        <p style="margin-top:22px"><strong>方式 B：</strong>新建书签，把下面代码粘贴到“网址 / URL”字段。</p>
+        <textarea id="bookmarkCode" readonly aria-label="书签代码"></textarea>
+        <p style="margin-top:10px">
+          <button type="button" id="copyBookmark">复制书签代码</button>
+        </p>
+        <p class="notes">工具只在当前浏览器运行时注入浮层，标注保存在当前页面对应的 localStorage；微调是运行时预览，刷新后会按保存的标注重新套用。</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <span class="num">02</span>
+        <h2>使用</h2>
+      </div>
+      <div class="section-body">
+        <ol class="steps">
+          <li><span class="step-copy">打开要审阅的网页、原型页或本地 HTML 文件。</span></li>
+          <li><span class="step-copy">点击书签栏里的 <span class="key">▄︻┻┳═一…… ☆(&gt;○&lt;)爆头</span>，右上角会出现标注浮窗，状态为 ON。</span></li>
+          <li><span class="step-copy">按住 <span class="key">Command Shift</span>，再点击页面元素，即可添加一条标注或直接微调样式。</span></li>
+          <li><span class="step-copy">在右上角清单里可以定位、编辑、删除标注；再次点击浮窗开关可隐藏标记。</span></li>
+          <li><span class="step-copy">点 <span class="key">复制给 AI</span>，会复制包含选择器、元素摘要、before → after 的标注清单。</span></li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <script type="text/plain" id="annotatorSource">
+var NS = "__BW_PROTO_ANNOTATOR__";
+if (window[NS]) {
+  window[NS].toggle();
+  return;
+}
+
+var STORE_KEY = "bw-proto-annotations::" + location.origin + location.pathname;
+var STYLE_ID = "__bw_proto_annotator_style__";
+var UI_ATTR = "data-bw-pa-ui";
+var annos = loadAnnos();
+var seq = annos.reduce(function(max, item) { return Math.max(max, item.id || 0); }, 0);
+var enabled = false;
+var pickChord = false;
+var hoverTarget = null;
+var dialog = null;
+var activeCancel = null;
+var toastTimer = null;
+var taffyNode = null;
+
+var PROPS = [
+  { key: "fontSize", css: "font-size", label: "字号" },
+  { key: "fontWeight", css: "font-weight", label: "字重" },
+  { key: "color", css: "color", label: "文字色" },
+  { key: "backgroundColor", css: "background-color", label: "背景色" },
+  { key: "borderRadius", css: "border-radius", label: "圆角" },
+  { key: "width", css: "width", label: "宽度" },
+  { key: "height", css: "height", label: "高度" }
+];
+
+var css = ""
+  + ".bw-pa-root,.bw-pa-panel,.bw-pa-dialog,.bw-pa-toast,.bw-pa-badge,.bw-pa-box{--ink:#171717;--paper:#fff;--soft:#f2f2ef;--muted:#6b6b6b;--line:#d8d8d3;--accent:#5368ff;--acid:#c8ff48;--mono:ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;--sans:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;box-sizing:border-box;font-family:var(--sans);letter-spacing:0;}"
+  + ".bw-pa-root *,.bw-pa-dialog *{box-sizing:border-box;letter-spacing:0;}"
+  + ".bw-pa-pick *{cursor:crosshair !important;}"
+  + ".bw-pa-hover{outline:2px solid var(--accent) !important;outline-offset:3px !important;}"
+  + ".bw-pa-box{position:absolute;z-index:2147483639;pointer-events:none;border:2px solid var(--accent);border-radius:2px;background:rgba(83,104,255,.07);}"
+  + ".bw-pa-box.hot{background:rgba(200,255,72,.2);}"
+  + ".bw-pa-box.flash{animation:bwPaBoxFlash .85s ease;}"
+  + "@keyframes bwPaBoxFlash{0%{box-shadow:0 0 0 8px rgba(83,104,255,.24);}100%{box-shadow:none;}}"
+  + ".bw-pa-badge{position:absolute;z-index:2147483641;min-width:24px;height:24px;padding:0 6px;display:grid;place-items:center;transform:translate(-50%,-50%);border:1px solid var(--ink);border-radius:50%;background:var(--paper);color:var(--ink);font:750 10px/1 var(--mono);cursor:pointer;pointer-events:auto;box-shadow:0 5px 14px rgba(0,0,0,.16);transition:transform .35s cubic-bezier(.16,1.45,.32,1),background .16s,color .16s;}"
+  + ".bw-pa-badge:hover,.bw-pa-badge.hot{background:var(--ink);color:var(--paper);transform:translate(-50%,-50%) scale(1.12);}"
+  + ".bw-pa-root{position:fixed;z-index:2147483645;top:48px;right:18px;width:390px;max-width:calc(100vw - 24px);color:var(--ink);filter:none;}"
+  + ".bw-pa-bar{display:flex;align-items:center;gap:9px;min-height:50px;border:1px solid rgba(23,23,23,.16);border-radius:8px;background:rgba(255,255,255,.96);box-shadow:0 15px 42px rgba(0,0,0,.16);padding:8px 9px 8px 12px;user-select:none;cursor:grab;backdrop-filter:blur(16px);transition:transform .5s cubic-bezier(.16,1.45,.32,1),background .2s,color .2s,box-shadow .2s;}"
+  + ".bw-pa-bar:active{cursor:grabbing;}"
+  + ".bw-pa-logo{font:700 10px/1.25 var(--mono);white-space:nowrap;}"
+  + ".bw-pa-count{display:grid;place-items:center;min-width:23px;height:23px;border:1px solid var(--line);border-radius:50%;background:var(--paper);color:var(--ink);font:700 10px/1 var(--mono);}"
+  + ".bw-pa-spacer{flex:1;}"
+  + ".bw-pa-state{min-width:24px;text-align:center;color:var(--muted);font:700 9px/1 var(--mono);}"
+  + ".bw-pa-switch{position:relative;flex:0 0 auto;width:40px;height:24px;border:1px solid var(--line);border-radius:999px;background:var(--soft);transition:background .2s,border-color .2s;}"
+  + ".bw-pa-switch:after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--paper);box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .42s cubic-bezier(.16,1.45,.32,1),background .2s;}"
+  + ".bw-pa-bar.on{background:var(--ink);color:var(--paper);}"
+  + ".bw-pa-bar.on .bw-pa-count{border-color:#494949;background:#292929;color:var(--paper);}"
+  + ".bw-pa-bar.on .bw-pa-state{color:var(--acid);}"
+  + ".bw-pa-bar.on .bw-pa-switch{border-color:var(--accent);background:var(--accent);}"
+  + ".bw-pa-bar.on .bw-pa-switch:after{transform:translateX(16px);background:var(--paper);}"
+  + ".bw-pa-panel{display:none;margin-top:8px;border:1px solid rgba(23,23,23,.14);border-radius:8px;background:rgba(255,255,255,.98);box-shadow:0 18px 50px rgba(0,0,0,.16);max-height:min(66vh,560px);overflow:hidden;backdrop-filter:blur(16px);transform-origin:top right;}"
+  + ".bw-pa-panel.show{display:flex;flex-direction:column;animation:bwPaPanelIn .5s cubic-bezier(.16,1.34,.32,1);}"
+  + "@keyframes bwPaPanelIn{0%{opacity:0;transform:translateY(-8px) scale(.96,.82);}60%{opacity:1;transform:translateY(1px) scale(1.01,1.02);}100%{transform:none;}}"
+  + ".bw-pa-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid var(--line);background:var(--paper);font:700 11px/1 var(--mono);cursor:move;}"
+  + ".bw-pa-mini-hint{color:var(--muted);font-weight:500;}"
+  + ".bw-pa-list{overflow:auto;min-height:44px;}"
+  + ".bw-pa-empty{padding:28px 14px;color:var(--muted);font-size:13px;line-height:1.65;}"
+  + ".bw-pa-item{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:start;padding:13px 14px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .16s;}"
+  + ".bw-pa-item:hover{background:var(--soft);}"
+  + ".bw-pa-no{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--paper);font:700 10px/1 var(--mono);}"
+  + ".bw-pa-copy{font-size:12px;font-weight:650;line-height:1.5;word-break:break-word;}"
+  + ".bw-pa-meta{display:block;margin-top:5px;color:var(--muted);font:10px/1.45 var(--mono);}"
+  + ".bw-pa-actions{display:flex;gap:4px;}"
+  + ".bw-pa-icon{display:grid;place-items:center;width:27px;height:27px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);font:700 13px/1 var(--mono);cursor:pointer;}"
+  + ".bw-pa-icon:hover{border-color:var(--ink);background:var(--ink);color:var(--paper);}"
+  + ".bw-pa-foot{display:flex;gap:8px;padding:11px 14px;border-top:1px solid var(--line);background:var(--soft);}"
+  + ".bw-pa-btn{min-height:38px;border:1px solid var(--ink);border-radius:7px;background:var(--ink);color:var(--paper);padding:0 13px;font:650 12px/1 var(--sans);cursor:pointer;}"
+  + ".bw-pa-btn.light{border-color:var(--line);background:var(--paper);color:var(--ink);}"
+  + ".bw-pa-btn:disabled{opacity:.45;cursor:not-allowed;}"
+  + ".bw-pa-dialog{position:fixed;z-index:2147483646;width:380px;max-width:calc(100vw - 18px);border:1px solid rgba(23,23,23,.18);border-radius:8px;background:var(--paper);box-shadow:0 22px 70px rgba(0,0,0,.22);color:var(--ink);overflow:hidden;animation:bwPaDialogIn .5s cubic-bezier(.16,1.34,.32,1);}"
+  + "@keyframes bwPaDialogIn{0%{opacity:0;transform:translateY(8px) scale(.94,.88);}65%{opacity:1;transform:translateY(-1px) scale(1.01,1.015);}100%{transform:none;}}"
+  + ".bw-pa-dhead{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--paper);cursor:move;user-select:none;}"
+  + ".bw-pa-dnum{display:grid;place-items:center;min-width:27px;height:27px;border-radius:50%;background:var(--ink);color:var(--paper);font:700 10px/1 var(--mono);}"
+  + ".bw-pa-dtitle{font:700 13px/1.2 var(--sans);flex:1;}"
+  + ".bw-pa-close{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--line);border-radius:7px;background:var(--paper);cursor:pointer;font:700 14px/1 var(--mono);}"
+  + ".bw-pa-close:hover{background:var(--ink);color:var(--paper);}"
+  + ".bw-pa-dbody{padding:14px;max-height:min(74vh,610px);overflow:auto;}"
+  + ".bw-pa-target{border-left:3px solid var(--accent);padding-left:10px;color:var(--muted);font-size:12px;line-height:1.6;word-break:break-word;}"
+  + ".bw-pa-mode{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:14px 0;padding:3px;border-radius:8px;background:var(--soft);}"
+  + ".bw-pa-mode button{min-height:36px;border:0;border-radius:6px;background:transparent;color:var(--ink);font:650 12px/1 var(--sans);cursor:pointer;}"
+  + ".bw-pa-mode button.act{background:var(--paper);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.1);}"
+  + ".bw-pa-sec{border:1px solid var(--line);border-radius:8px;margin-top:10px;overflow:hidden;}"
+  + ".bw-pa-sec h4{margin:0;padding:10px;border-bottom:1px solid var(--line);background:var(--soft);font:700 10px/1 var(--mono);}"
+  + ".bw-pa-field{display:grid;grid-template-columns:86px 1fr;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid var(--line);}"
+  + ".bw-pa-field:last-child{border-bottom:0;}"
+  + ".bw-pa-field label{font:650 12px/1 var(--sans);}"
+  + ".bw-pa-field input,.bw-pa-field select,.bw-pa-field textarea{width:100%;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);min-height:34px;padding:6px 8px;font:12px/1.4 var(--mono);box-sizing:border-box;outline:none;}"
+  + ".bw-pa-field input:focus,.bw-pa-field select:focus,.bw-pa-field textarea:focus,.bw-pa-note:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(83,104,255,.13);}"
+  + ".bw-pa-field textarea{min-height:62px;resize:vertical;font-family:var(--sans);}"
+  + ".bw-pa-two{display:grid;grid-template-columns:74px 1fr;gap:6px;align-items:center;}"
+  + ".bw-pa-color{display:grid;grid-template-columns:42px 1fr 38px;gap:6px;align-items:center;}"
+  + ".bw-pa-none{display:grid;place-items:center;height:34px;border:1px solid var(--line);border-radius:5px;font:650 11px/1 var(--sans);cursor:pointer;}"
+  + ".bw-pa-none.act{background:var(--ink);color:var(--paper);}"
+  + ".bw-pa-preview{margin-top:10px;padding:11px;border:1px solid var(--line);border-radius:7px;background:var(--soft);font-size:12px;line-height:1.6;}"
+  + ".bw-pa-preview b{display:block;margin-bottom:5px;font:700 10px/1 var(--mono);}"
+  + ".bw-pa-note{width:100%;min-height:104px;border:1px solid var(--line);border-radius:7px;padding:10px;font:13px/1.6 var(--sans);resize:vertical;box-sizing:border-box;outline:none;}"
+  + ".bw-pa-hint{margin:10px 0 0;color:var(--muted);font:11px/1.5 var(--mono);}"
+  + ".bw-pa-dfoot{display:flex;gap:8px;margin-top:12px;}"
+  + ".bw-pa-dfoot .bw-pa-btn{flex:1;}"
+  + ".bw-pa-toast{position:fixed;z-index:2147483647;left:50%;bottom:22px;transform:translate(-50%,16px) scale(.96);opacity:0;transition:opacity .2s,transform .5s cubic-bezier(.16,1.45,.32,1);border:1px solid rgba(255,255,255,.18);border-radius:8px;background:var(--ink);box-shadow:0 14px 40px rgba(0,0,0,.22);padding:11px 14px;max-width:min(440px,calc(100vw - 24px));color:var(--paper);font:650 13px/1.4 var(--sans);pointer-events:none;}"
+  + ".bw-pa-toast.show{opacity:1;transform:translate(-50%,0);}"
+  + ".bw-pa-taffy{--tail-x:0px;--tail-y:0px;transition:transform .52s cubic-bezier(.16,1.45,.32,1),box-shadow .2s;will-change:transform;}"
+  + ".bw-pa-taffy.bw-pa-pulling{transition:transform .08s linear;box-shadow:var(--tail-x) var(--tail-y) 0 -9px var(--accent);}"
+  + ".bw-pa-taffy.bw-pa-release{animation:bwPaSplat .56s cubic-bezier(.16,1.45,.32,1);}"
+  + "@keyframes bwPaSplat{0%{transform:scale(.94,1.06);}48%{transform:scale(1.045,.965);}100%{transform:none;}}"
+  + "@media(max-width:520px){.bw-pa-root{top:12px;right:12px;width:calc(100vw - 24px);}.bw-pa-logo{font-size:9px;max-width:48vw;overflow:hidden;text-overflow:ellipsis;}.bw-pa-dialog{left:9px !important;width:calc(100vw - 18px);}.bw-pa-field{grid-template-columns:1fr;gap:6px;}}"
+  + "@media(prefers-reduced-motion:reduce){.bw-pa-root *,.bw-pa-dialog *,.bw-pa-toast{animation-duration:.01ms !important;transition-duration:.01ms !important;}}";
+
+injectStyle();
+
+var root = mark(document.createElement("div"));
+root.className = "bw-pa-root";
+root.innerHTML = ""
+  + "<div class=\"bw-pa-bar\"><span class=\"bw-pa-logo\">▄︻┻┳═一…… ☆(&gt;○&lt;)爆头</span><span class=\"bw-pa-count\">0</span><span class=\"bw-pa-spacer\"></span><span class=\"bw-pa-state\">OFF</span><span class=\"bw-pa-switch\"></span></div>"
+  + "<div class=\"bw-pa-panel\"><div class=\"bw-pa-panel-head\"><span>标注清单</span><span class=\"bw-pa-mini-hint\">Command Shift 点选</span></div><div class=\"bw-pa-list\"></div><div class=\"bw-pa-foot\"><button class=\"bw-pa-btn bw-pa-copy\">复制给 AI</button><button class=\"bw-pa-btn light bw-pa-clear\">清空</button></div></div>";
+document.body.appendChild(root);
+document.addEventListener("pointerdown", liquidDown, true);
+document.addEventListener("pointermove", liquidMove, true);
+document.addEventListener("pointerup", liquidRelease, true);
+document.addEventListener("pointercancel", liquidRelease, true);
+document.addEventListener("click", liquidClickGuard, true);
+
+var bar = root.querySelector(".bw-pa-bar");
+var panel = root.querySelector(".bw-pa-panel");
+var list = root.querySelector(".bw-pa-list");
+drag(bar, root);
+drag(root.querySelector(".bw-pa-panel-head"), root);
+
+bar.addEventListener("click", function() {
+  if (root._dragging) return;
+  toggle();
+});
+
+root.querySelector(".bw-pa-copy").addEventListener("click", function(event) {
+  event.stopPropagation();
+  copyOut();
+});
+
+root.querySelector(".bw-pa-clear").addEventListener("click", function(event) {
+  event.stopPropagation();
+  if (!annos.length) return;
+  if (confirm("清空当前页面的全部标注？")) {
+    annos.forEach(restoreStored);
+    annos = [];
+    seq = 0;
+    persist();
+    applyAll();
+    renderAll();
+  }
+});
+
+list.addEventListener("click", function(event) {
+  var action = event.target.closest("[data-action]");
+  var item = event.target.closest("[data-id]");
+  if (!item) return;
+  var id = Number(item.getAttribute("data-id"));
+  if (action) {
+    event.stopPropagation();
+    var name = action.getAttribute("data-action");
+    if (name === "edit") editAnno(id);
+    if (name === "delete") deleteAnno(id);
+    return;
+  }
+  focusAnno(id);
+});
+
+list.addEventListener("mouseover", function(event) {
+  var item = event.target.closest("[data-id]");
+  if (item) hotAnno(Number(item.getAttribute("data-id")), true);
+});
+
+list.addEventListener("mouseout", function(event) {
+  var item = event.target.closest("[data-id]");
+  if (item) hotAnno(Number(item.getAttribute("data-id")), false);
+});
+
+document.addEventListener("click", function(event) {
+  if (!enabled || dialog || !isPickEvent(event)) return;
+  var target = findPickTarget(event);
+  if (!target) return;
+  block(event);
+  clearHover();
+  openPicker(target, event.clientX + 14, event.clientY + 14);
+}, true);
+
+document.addEventListener("mousemove", function(event) {
+  hoverTarget = findPickTarget(event);
+  if (!enabled || dialog || !pickChord) return;
+  clearHover();
+  if (hoverTarget) hoverTarget.classList.add("bw-pa-hover");
+}, true);
+
+window.addEventListener("keydown", function(event) {
+  if (!enabled || dialog) return;
+  if ((event.key === "Meta" || event.key === "Shift") && isPickEvent(event)) {
+    pickChord = true;
+    document.body.classList.add("bw-pa-pick");
+    if (hoverTarget) hoverTarget.classList.add("bw-pa-hover");
+  }
+}, true);
+
+window.addEventListener("keyup", function(event) {
+  if (event.key === "Meta" || event.key === "Shift") {
+    pickChord = false;
+    document.body.classList.remove("bw-pa-pick");
+    clearHover();
+  }
+}, true);
+
+window.addEventListener("blur", function() {
+  pickChord = false;
+  clearHover();
+});
+
+window.addEventListener("scroll", renderMarks, true);
+window.addEventListener("resize", function() {
+  renderMarks();
+  clamp(root);
+  if (dialog) clamp(dialog);
+});
+
+function toggle() {
+  setEnabled(!enabled);
+}
+
+function setEnabled(value) {
+  enabled = value;
+  bar.classList.toggle("on", enabled);
+  root.querySelector(".bw-pa-state").textContent = enabled ? "ON" : "OFF";
+  panel.classList.toggle("show", enabled);
+  document.body.classList.toggle("bw-pa-pick", enabled && pickChord);
+  if (!enabled) {
+    closeDialog(true);
+    clearHover();
+  }
+  renderAll();
+  toast(enabled ? "标注模式已开启：Command Shift 点击元素" : "标注模式已关闭");
+}
+
+function openPicker(el, left, top) {
+  openEditor({
+    el: el,
+    id: seq + 1,
+    title: "新增标注",
+    left: left,
+    top: top,
+    onSave: function(data) {
+      var hasValue = data.mode === "note" ? !!data.note : hasChanged(data.base, data.now);
+      if (!hasValue) {
+        if (data.mode === "tweak") restoreElement(el, data.inlineBase, data.base);
+        return;
+      }
+      seq += 1;
+      annos.push({
+        id: seq,
+        selector: selectorOf(el),
+        context: contextOf(el),
+        summary: summaryOf(el),
+        type: typeOf(el),
+        mode: data.mode,
+        note: data.note,
+        base: data.base,
+        now: data.now,
+        inlineBase: data.inlineBase
+      });
+      persist();
+      applyAll();
+      renderAll();
+    }
+  });
+}
+
+function editAnno(id) {
+  var anno = findAnno(id);
+  if (!anno) return;
+  var el = resolveAnno(anno);
+  openEditor({
+    el: el,
+    anno: anno,
+    id: anno.id,
+    title: "编辑标注",
+    left: Math.max(8, window.innerWidth / 2 - 180),
+    top: Math.max(8, window.innerHeight / 2 - 260),
+    onSave: function(data) {
+      var hasValue = data.mode === "note" ? !!data.note : hasChanged(data.base, data.now);
+      if (!hasValue) {
+        restoreStored(anno);
+        annos = annos.filter(function(item) { return item.id !== id; });
+      } else {
+        anno.mode = data.mode;
+        anno.note = data.note;
+        anno.base = data.base;
+        anno.now = data.now;
+        anno.inlineBase = data.inlineBase;
+        anno.type = el ? typeOf(el) : anno.type;
+        anno.summary = el ? summaryOf(el) : anno.summary;
+        anno.context = el ? contextOf(el) : anno.context;
+      }
+      persist();
+      applyAll();
+      renderAll();
+    }
+  });
+}
+
+function openEditor(opts) {
+  closeDialog(true);
+  var el = opts.el || null;
+  var existing = opts.anno || null;
+  var editableText = !!el && isTextEditable(el);
+  var base = existing && existing.base ? clone(existing.base) : readStyle(el);
+  var now = existing && existing.now ? clone(existing.now) : clone(base);
+  var inlineBase = existing && existing.inlineBase ? clone(existing.inlineBase) : readInlineStyle(el);
+  var mode = existing ? existing.mode : (el ? "tweak" : "note");
+  var type = el ? typeOf(el) : (existing && existing.type ? existing.type : { label: "元素", tag: "?" });
+
+  dialog = mark(document.createElement("div"));
+  dialog.className = "bw-pa-dialog";
+  dialog.innerHTML = ""
+    + "<div class=\"bw-pa-dhead\"><span class=\"bw-pa-dnum\">#" + opts.id + "</span><span class=\"bw-pa-dtitle\">" + esc(opts.title) + "</span><span class=\"bw-pa-close\" title=\"取消\">×</span></div>"
+    + "<div class=\"bw-pa-dbody\">"
+    + "<div class=\"bw-pa-target\"><strong>" + esc(type.label) + " &lt;" + esc(type.tag) + "&gt;</strong><br>" + esc(el ? contextOf(el) : (existing.context || "元素不存在")) + "<br>“" + esc(el ? summaryOf(el) : (existing.summary || "未找到元素")) + "”</div>"
+    + (el ? "<div class=\"bw-pa-mode\"><button type=\"button\" class=\"bw-pa-mode-tweak\">直接微调</button><button type=\"button\" class=\"bw-pa-mode-note\">文字说明</button></div>" : "")
+    + "<div class=\"bw-pa-tweak\">"
+    + (editableText ? "<div class=\"bw-pa-sec\"><h4>文案</h4><div class=\"bw-pa-field\"><label>文本</label><textarea class=\"bw-pa-text\"></textarea></div></div>" : "")
+    + "<div class=\"bw-pa-sec\"><h4>样式</h4>"
+    + fieldNumber("字号", "fontSize", pxNumber(now.fontSize))
+    + fieldWeight(now.fontWeight)
+    + fieldColor("文字色", "color", now.color, false)
+    + fieldColor("背景色", "backgroundColor", now.backgroundColor, true)
+    + fieldNumber("圆角", "borderRadius", pxNumber(now.borderRadius))
+    + fieldNumber("宽度", "width", pxNumber(now.width))
+    + fieldNumber("高度", "height", pxNumber(now.height))
+    + "</div><div class=\"bw-pa-preview\"><b>自动生成的修改意见</b><span class=\"bw-pa-preview-text\"></span></div></div>"
+    + "<div class=\"bw-pa-note-wrap\"><textarea class=\"bw-pa-note\" placeholder=\"用一句话描述这里要怎么改\"></textarea></div>"
+    + "<p class=\"bw-pa-hint\">Ctrl / ⌘ + Enter 保存，Esc 取消；标题栏可拖动。</p>"
+    + "<div class=\"bw-pa-dfoot\"><button class=\"bw-pa-btn bw-pa-save\">保存标注</button><button class=\"bw-pa-btn light bw-pa-cancel\">取消</button></div>"
+    + "</div>";
+
+  document.body.appendChild(dialog);
+  dialog.style.left = opts.left + "px";
+  dialog.style.top = opts.top + "px";
+  clamp(dialog);
+  drag(dialog.querySelector(".bw-pa-dhead"), dialog);
+
+  var textInput = dialog.querySelector(".bw-pa-text");
+  var noteInput = dialog.querySelector(".bw-pa-note");
+  var preview = dialog.querySelector(".bw-pa-preview-text");
+  if (textInput) textInput.value = now.text || "";
+  noteInput.value = existing ? (existing.note || "") : "";
+
+  function refreshPreview() {
+    var summary = changeSummary(base, now);
+    preview.textContent = summary || "还没有改动。";
+  }
+
+  function applyNow() {
+    if (!el) return;
+    restoreElement(el, inlineBase, base);
+    PROPS.forEach(function(prop) {
+      if (String(now[prop.key]) !== String(base[prop.key])) {
+        if (now[prop.key] == null && prop.key === "backgroundColor") el.style.backgroundColor = "transparent";
+        else el.style[prop.key] = now[prop.key];
+      }
+    });
+    if (editableText && now.text !== base.text) el.textContent = now.text || "";
+    renderMarks();
+  }
+
+  function setMode(nextMode) {
+    mode = nextMode;
+    var tweakBody = dialog.querySelector(".bw-pa-tweak");
+    var noteBody = dialog.querySelector(".bw-pa-note-wrap");
+    var tweakBtn = dialog.querySelector(".bw-pa-mode-tweak");
+    var noteBtn = dialog.querySelector(".bw-pa-mode-note");
+    if (tweakBtn) tweakBtn.classList.toggle("act", mode === "tweak");
+    if (noteBtn) noteBtn.classList.toggle("act", mode === "note");
+    tweakBody.style.display = mode === "tweak" ? "block" : "none";
+    noteBody.style.display = mode === "note" ? "block" : "none";
+    if (mode === "tweak") {
+      applyNow();
+      refreshPreview();
+    } else if (el) {
+      restoreElement(el, inlineBase, base);
+      renderMarks();
+    }
+  }
+
+  if (textInput) {
+    textInput.addEventListener("input", function() {
+      now.text = textInput.value;
+      applyNow();
+      refreshPreview();
+    });
+  }
+
+  ["fontSize", "borderRadius", "width", "height"].forEach(function(key) {
+    var input = dialog.querySelector("[data-pa-input=\"" + key + "\"]");
+    if (!input) return;
+    input.addEventListener("input", function() {
+      now[key] = Math.max(0, Number(input.value) || 0) + "px";
+      applyNow();
+      refreshPreview();
+    });
+  });
+
+  var weight = dialog.querySelector("[data-pa-input=\"fontWeight\"]");
+  if (weight) {
+    weight.addEventListener("change", function() {
+      now.fontWeight = weight.value;
+      applyNow();
+      refreshPreview();
+    });
+  }
+
+  ["color", "backgroundColor"].forEach(function(key) {
+    var color = dialog.querySelector("[data-pa-color=\"" + key + "\"]");
+    var hex = dialog.querySelector("[data-pa-hex=\"" + key + "\"]");
+    var none = dialog.querySelector("[data-pa-none=\"" + key + "\"]");
+    if (!color || !hex) return;
+    function setColor(value) {
+      now[key] = value;
+      if (value) {
+        color.value = value;
+        hex.value = value;
+      } else {
+        hex.value = "";
+      }
+      if (none) none.classList.toggle("act", !value);
+      applyNow();
+      refreshPreview();
+    }
+    color.addEventListener("input", function() { setColor(color.value); });
+    hex.addEventListener("change", function() {
+      var value = hex.value.trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(value)) setColor(value);
+      else if (!value && key === "backgroundColor") setColor(null);
+    });
+    if (none) none.addEventListener("click", function() { setColor(null); });
+  });
+
+  var modeTweak = dialog.querySelector(".bw-pa-mode-tweak");
+  var modeNote = dialog.querySelector(".bw-pa-mode-note");
+  if (modeTweak) modeTweak.addEventListener("click", function() { setMode("tweak"); });
+  if (modeNote) modeNote.addEventListener("click", function() { setMode("note"); });
+
+  function finish() {
+    var data;
+    if (mode === "note") {
+      data = { mode: "note", note: noteInput.value.trim(), base: base, now: clone(base), inlineBase: inlineBase };
+    } else {
+      data = { mode: "tweak", note: "", base: base, now: now, inlineBase: inlineBase };
+    }
+    closeDialog(false);
+    opts.onSave(data);
+  }
+
+  function cancel() {
+    if (el) {
+      restoreElement(el, inlineBase, base);
+      if (existing) applyStored(existing);
+      renderMarks();
+    }
+    closeDialog(false);
+  }
+
+  activeCancel = cancel;
+  dialog.querySelector(".bw-pa-save").addEventListener("click", finish);
+  dialog.querySelector(".bw-pa-cancel").addEventListener("click", cancel);
+  dialog.querySelector(".bw-pa-close").addEventListener("click", cancel);
+  dialog.addEventListener("keydown", function(event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      block(event);
+      finish();
+    }
+    if (event.key === "Escape") {
+      block(event);
+      cancel();
+    }
+  });
+
+  setMode(mode);
+  if (mode === "note") noteInput.focus();
+  else if (textInput) textInput.focus();
+}
+
+function renderAll() {
+  root.querySelector(".bw-pa-count").textContent = annos.length;
+  renderPanel();
+  renderMarks();
+}
+
+function renderPanel() {
+  if (!annos.length) {
+    list.innerHTML = "<div class=\"bw-pa-empty\">还没有标注。开启后按住 Command Shift，再点击页面元素。</div>";
+    return;
+  }
+  list.innerHTML = annos.map(function(anno) {
+    var text = anno.mode === "note" ? (anno.note || "(空)") : ("微调：" + (changeSummary(anno.base, anno.now) || "(无变化)"));
+    var meta = (anno.context || "页面") + " · " + (anno.type ? anno.type.label : "元素");
+    return "<div class=\"bw-pa-item\" data-id=\"" + anno.id + "\"><span class=\"bw-pa-no\">" + anno.id + "</span><span class=\"bw-pa-copy\">" + esc(text) + "<span class=\"bw-pa-meta\">" + esc(meta) + "</span></span><span class=\"bw-pa-actions\"><span class=\"bw-pa-icon\" data-action=\"edit\" title=\"编辑\">✎</span><span class=\"bw-pa-icon\" data-action=\"delete\" title=\"删除\">×</span></span></div>";
+  }).join("");
+}
+
+function renderMarks() {
+  document.querySelectorAll(".bw-pa-box,.bw-pa-badge").forEach(function(node) { node.remove(); });
+  if (!enabled) return;
+  annos.forEach(function(anno) {
+    var el = resolveAnno(anno);
+    if (!el) return;
+    var rect = el.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+    var box = mark(document.createElement("div"));
+    box.className = "bw-pa-box";
+    box.setAttribute("data-mark-id", anno.id);
+    box.style.left = Math.round(rect.left + window.scrollX) + "px";
+    box.style.top = Math.round(rect.top + window.scrollY) + "px";
+    box.style.width = Math.round(rect.width) + "px";
+    box.style.height = Math.round(rect.height) + "px";
+    document.body.appendChild(box);
+    var badge = mark(document.createElement("div"));
+    badge.className = "bw-pa-badge";
+    badge.setAttribute("data-mark-id", anno.id);
+    badge.textContent = anno.id;
+    badge.style.left = Math.round(rect.left + window.scrollX) + "px";
+    badge.style.top = Math.round(rect.top + window.scrollY) + "px";
+    badge.addEventListener("click", function(event) {
+      block(event);
+      editAnno(anno.id);
+    });
+    badge.addEventListener("mouseover", function() { hotAnno(anno.id, true); });
+    badge.addEventListener("mouseout", function() { hotAnno(anno.id, false); });
+    document.body.appendChild(badge);
+  });
+}
+
+function hotAnno(id, value) {
+  document.querySelectorAll("[data-mark-id=\"" + id + "\"]").forEach(function(node) {
+    node.classList.toggle("hot", value);
+  });
+}
+
+function focusAnno(id) {
+  var anno = findAnno(id);
+  var el = anno && resolveAnno(anno);
+  if (!el) return toast("没有找到对应元素，页面结构可能已变化");
+  el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+  setTimeout(function() {
+    renderMarks();
+    document.querySelectorAll("[data-mark-id=\"" + id + "\"]").forEach(function(node) {
+      node.classList.add("flash");
+      setTimeout(function() { node.classList.remove("flash"); }, 900);
+    });
+  }, 360);
+}
+
+function deleteAnno(id) {
+  var anno = findAnno(id);
+  restoreStored(anno);
+  annos = annos.filter(function(anno) { return anno.id !== id; });
+  persist();
+  applyAll();
+  renderAll();
+}
+
+function applyAll() {
+  annos.forEach(applyStored);
+}
+
+function applyStored(anno) {
+  if (!anno || anno.mode !== "tweak") return;
+  var el = resolveAnno(anno);
+  if (!el) return;
+  restoreElement(el, anno.inlineBase || {}, anno.base || {});
+  PROPS.forEach(function(prop) {
+    if (!anno.now || !anno.base) return;
+    if (String(anno.now[prop.key]) !== String(anno.base[prop.key])) {
+      if (anno.now[prop.key] == null && prop.key === "backgroundColor") el.style.backgroundColor = "transparent";
+      else el.style[prop.key] = anno.now[prop.key];
+    }
+  });
+  if (anno.now && anno.base && anno.now.text != null && String(anno.now.text) !== String(anno.base.text) && isTextEditable(el)) {
+    el.textContent = anno.now.text;
+  }
+}
+
+function restoreStored(anno) {
+  if (!anno || anno.mode !== "tweak") return;
+  var el = resolveAnno(anno);
+  if (!el) return;
+  restoreElement(el, anno.inlineBase || {}, anno.base || {});
+}
+
+function exportMarkdown() {
+  if (!annos.length) return "（无标注）";
+  var lines = ["【原型标注清单】共 " + annos.length + " 条"];
+  annos.forEach(function(anno) {
+    var type = anno.type ? anno.type.label + " <" + anno.type.tag + ">" : "元素";
+    lines.push("");
+    lines.push("- [" + anno.id + "] " + (anno.mode === "note" ? (anno.note || "(空)") : "【微调】 " + (changeSummary(anno.base, anno.now) || "(无变化)")));
+    lines.push("  · 元素：" + type + " · “" + (anno.summary || "") + "”");
+    lines.push("  · 区域：" + (anno.context || "页面"));
+    lines.push("  · 选择器：" + (anno.selector || ""));
+    if (anno.mode !== "note") {
+      if (anno.now && anno.base && anno.now.text != null && String(anno.now.text) !== String(anno.base.text)) {
+        lines.push("  · 文案：“" + anno.base.text + "” → “" + anno.now.text + "”");
+      }
+      var styleChanges = [];
+      PROPS.forEach(function(prop) {
+        if (anno.now && anno.base && String(anno.now[prop.key]) !== String(anno.base[prop.key])) {
+          styleChanges.push(prop.css + " " + displayValue(anno.base[prop.key]) + " → " + displayValue(anno.now[prop.key]));
+        }
+      });
+      if (styleChanges.length) lines.push("  · 样式：" + styleChanges.join("；"));
+    }
+  });
+  return lines.join("\n");
+}
+
+function copyOut() {
+  if (!annos.length) return toast("还没有标注");
+  copyText(exportMarkdown(), function() {
+    toast("已复制 " + annos.length + " 条标注");
+  }, function() {
+    toast("复制失败，请手动复制");
+  });
+}
+
+function fieldNumber(label, key, value) {
+  return "<div class=\"bw-pa-field\"><label>" + label + "</label><div class=\"bw-pa-two\"><input type=\"number\" min=\"0\" max=\"4000\" data-pa-input=\"" + key + "\" value=\"" + value + "\"><span>px</span></div></div>";
+}
+
+function fieldWeight(value) {
+  var weights = ["300", "400", "500", "600", "700", "800", "900"];
+  return "<div class=\"bw-pa-field\"><label>字重</label><select data-pa-input=\"fontWeight\">" + weights.map(function(weight) {
+    return "<option value=\"" + weight + "\"" + (String(value) === weight ? " selected" : "") + ">" + weight + "</option>";
+  }).join("") + "</select></div>";
+}
+
+function fieldColor(label, key, value, allowNone) {
+  var color = value || "#ffffff";
+  return "<div class=\"bw-pa-field\"><label>" + label + "</label><div class=\"bw-pa-color\"><input type=\"color\" data-pa-color=\"" + key + "\" value=\"" + color + "\"><input data-pa-hex=\"" + key + "\" value=\"" + (value || "") + "\">" + (allowNone ? "<span class=\"bw-pa-none" + (!value ? " act" : "") + "\" data-pa-none=\"" + key + "\">无</span>" : "<span></span>") + "</div></div>";
+}
+
+function readStyle(el) {
+  if (!el) return {};
+  var style = getComputedStyle(el);
+  return {
+    text: isTextEditable(el) ? el.textContent : null,
+    fontSize: style.fontSize,
+    fontWeight: normalizeWeight(style.fontWeight),
+    color: colorToHex(style.color) || "#111111",
+    backgroundColor: colorToHex(style.backgroundColor),
+    borderRadius: style.borderRadius.split(" ")[0],
+    width: Math.round(el.getBoundingClientRect().width) + "px",
+    height: Math.round(el.getBoundingClientRect().height) + "px"
+  };
+}
+
+function readInlineStyle(el) {
+  if (!el) return {};
+  var out = {};
+  PROPS.forEach(function(prop) { out[prop.key] = el.style[prop.key] || ""; });
+  out.text = isTextEditable(el) ? el.textContent : null;
+  return out;
+}
+
+function restoreElement(el, inlineBase, base) {
+  if (!el) return;
+  PROPS.forEach(function(prop) {
+    el.style[prop.key] = inlineBase && inlineBase[prop.key] ? inlineBase[prop.key] : "";
+  });
+  if (inlineBase && inlineBase.text != null && isTextEditable(el)) {
+    el.textContent = inlineBase.text;
+  } else if (base && base.text != null && isTextEditable(el)) {
+    el.textContent = base.text;
+  }
+}
+
+function changeSummary(base, now) {
+  if (!base || !now) return "";
+  var parts = [];
+  if (now.text != null && String(now.text) !== String(base.text)) parts.push("文案 “" + short(base.text, 22) + "” → “" + short(now.text, 22) + "”");
+  PROPS.forEach(function(prop) {
+    if (String(now[prop.key]) !== String(base[prop.key])) {
+      parts.push(prop.label + " " + displayValue(base[prop.key]) + " → " + displayValue(now[prop.key]));
+    }
+  });
+  return parts.join("；");
+}
+
+function hasChanged(base, now) {
+  if (!base || !now) return false;
+  if (now.text != null && String(now.text) !== String(base.text)) return true;
+  return PROPS.some(function(prop) { return String(now[prop.key]) !== String(base[prop.key]); });
+}
+
+function selectorOf(el) {
+  if (!el || !el.tagName) return "";
+  if (el.id) return "#" + cssEscape(el.id);
+  var parts = [];
+  while (el && el.nodeType === 1 && el !== document.body) {
+    var tag = el.tagName.toLowerCase();
+    var parent = el.parentElement;
+    if (!parent) break;
+    var same = Array.prototype.filter.call(parent.children, function(child) {
+      return child.tagName === el.tagName;
+    });
+    if (same.length > 1) tag += ":nth-of-type(" + (same.indexOf(el) + 1) + ")";
+    parts.unshift(tag);
+    el = parent;
+  }
+  return "body > " + parts.join(" > ");
+}
+
+function resolveAnno(anno) {
+  if (!anno || !anno.selector) return null;
+  try { return document.querySelector(anno.selector); } catch (err) { return null; }
+}
+
+function contextOf(el) {
+  var node = el;
+  while (node && node !== document.body) {
+    if (/^(SECTION|ARTICLE|MAIN|HEADER|FOOTER|NAV|ASIDE)$/i.test(node.tagName)) return node.tagName.toLowerCase();
+    var label = node.getAttribute && (node.getAttribute("aria-label") || node.getAttribute("data-section") || node.getAttribute("data-name"));
+    if (label) return label;
+    node = node.parentElement;
+  }
+  return document.title || location.pathname || "当前页面";
+}
+
+function summaryOf(el) {
+  if (!el) return "";
+  var text = (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+  if (!text && el.getAttribute) text = el.getAttribute("alt") || el.getAttribute("title") || el.getAttribute("aria-label") || "";
+  if (!text && el.tagName === "IMG") text = el.getAttribute("src") || "图片";
+  return short(text || el.tagName.toLowerCase(), 76);
+}
+
+function typeOf(el) {
+  var tag = (el && el.tagName ? el.tagName.toLowerCase() : "?");
+  var label = "元素";
+  if (/^h[1-6]$/.test(tag)) label = "标题";
+  else if (tag === "p" || tag === "span" || tag === "strong" || tag === "em") label = "文本";
+  else if (tag === "a") label = "链接";
+  else if (tag === "button") label = "按钮";
+  else if (tag === "img" || tag === "picture" || tag === "video") label = "媒体";
+  else if (tag === "input" || tag === "textarea" || tag === "select") label = "表单";
+  else if (tag === "section" || tag === "article" || tag === "div") label = "容器";
+  return { tag: tag, label: label };
+}
+
+function isTextEditable(el) {
+  if (!el) return false;
+  var tag = el.tagName ? el.tagName.toLowerCase() : "";
+  if (/^(script|style|svg|canvas|img|video|input|textarea|select)$/.test(tag)) return false;
+  return el.children.length === 0 && (el.textContent || "").trim().length > 0;
+}
+
+function findPickTarget(event) {
+  var path = event.composedPath ? event.composedPath() : [];
+  for (var i = 0; i < path.length; i += 1) {
+    if (isPickable(path[i])) return path[i];
+  }
+  return isPickable(event.target) ? event.target : null;
+}
+
+function isPickable(node) {
+  return !!(node && node.nodeType === 1 && node !== document.body && node !== document.documentElement && !node.closest("[" + UI_ATTR + "]"));
+}
+
+function isPickEvent(event) {
+  return !!(event && event.metaKey && event.shiftKey);
+}
+
+function clearHover() {
+  document.querySelectorAll(".bw-pa-hover").forEach(function(node) { node.classList.remove("bw-pa-hover"); });
+}
+
+function mark(node) {
+  node.setAttribute(UI_ATTR, "1");
+  return node;
+}
+
+function injectStyle() {
+  var style = document.getElementById(STYLE_ID);
+  if (!style) {
+    style = document.createElement("style");
+    style.id = STYLE_ID;
+    document.head.appendChild(style);
+  }
+  style.textContent = css;
+}
+
+function closeDialog(runCancel) {
+  if (runCancel && activeCancel) {
+    var cancel = activeCancel;
+    activeCancel = null;
+    cancel();
+    return;
+  }
+  if (dialog) dialog.remove();
+  dialog = null;
+  activeCancel = null;
+}
+
+function liquidDown(event) {
+  if (event.button !== 0 || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+  var node = event.target.closest(".bw-pa-btn,.bw-pa-icon,.bw-pa-close,.bw-pa-mode button,.bw-pa-none");
+  if (!node || !node.closest("[" + UI_ATTR + "]")) return;
+  liquidRelease();
+  taffyNode = node;
+  node._bwPaTaffy = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+  node.classList.remove("bw-pa-release");
+  node.classList.add("bw-pa-taffy", "bw-pa-pulling");
+  try { node.setPointerCapture(event.pointerId); } catch (err) {}
+}
+
+function liquidMove(event) {
+  var node = taffyNode;
+  var state = node && node._bwPaTaffy;
+  if (!state || state.pointerId !== event.pointerId) return;
+  var dx = event.clientX - state.x;
+  var dy = event.clientY - state.y;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > 5) state.moved = true;
+  var pull = Math.min(44, dist);
+  var ux = dist ? dx / dist : 0;
+  var uy = dist ? dy / dist : 0;
+  var tension = pull / 44;
+  var angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  node.style.transform = "translate(" + (ux * pull * .14).toFixed(2) + "px," + (uy * pull * .14).toFixed(2) + "px) rotate(" + (angle * .025).toFixed(2) + "deg) scale(" + (1 + tension * .055).toFixed(3) + "," + (1 - tension * .035).toFixed(3) + ")";
+  node.style.setProperty("--tail-x", (-ux * Math.min(11, pull * .24)).toFixed(2) + "px");
+  node.style.setProperty("--tail-y", (-uy * Math.min(11, pull * .24)).toFixed(2) + "px");
+}
+
+function liquidRelease(event) {
+  var node = taffyNode;
+  var state = node && node._bwPaTaffy;
+  if (!node || !state || (event && state.pointerId !== event.pointerId)) return;
+  node._bwPaSuppressClick = state.moved;
+  node._bwPaTaffy = null;
+  node.classList.remove("bw-pa-pulling");
+  node.style.transform = "";
+  node.style.removeProperty("--tail-x");
+  node.style.removeProperty("--tail-y");
+  node.classList.add("bw-pa-release");
+  setTimeout(function() { node.classList.remove("bw-pa-release"); }, 620);
+  taffyNode = null;
+}
+
+function liquidClickGuard(event) {
+  var node = event.target.closest(".bw-pa-taffy");
+  if (!node || !node._bwPaSuppressClick) return;
+  node._bwPaSuppressClick = false;
+  block(event);
+}
+
+function drag(handle, target) {
+  handle.addEventListener("mousedown", function(event) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    var startX = event.clientX;
+    var startY = event.clientY;
+    var rect = target.getBoundingClientRect();
+    var originX = rect.left;
+    var originY = rect.top;
+    var moved = false;
+    function move(e) {
+      if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 3) {
+        moved = true;
+        target._dragging = true;
+      }
+      if (!moved) return;
+      target.style.left = originX + e.clientX - startX + "px";
+      target.style.top = originY + e.clientY - startY + "px";
+      target.style.right = "auto";
+      target.style.bottom = "auto";
+      clamp(target);
+    }
+    function up() {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      setTimeout(function() { target._dragging = false; }, 0);
+    }
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+}
+
+function clamp(node) {
+  if (!node) return;
+  var rect = node.getBoundingClientRect();
+  var left = rect.left;
+  var top = rect.top;
+  if (left + rect.width > window.innerWidth - 6) left = window.innerWidth - rect.width - 6;
+  if (top + rect.height > window.innerHeight - 6) top = window.innerHeight - rect.height - 6;
+  left = Math.max(6, left);
+  top = Math.max(6, top);
+  node.style.left = left + "px";
+  node.style.top = top + "px";
+  node.style.right = "auto";
+}
+
+function toast(message) {
+  var node = document.querySelector(".bw-pa-toast");
+  if (!node) {
+    node = mark(document.createElement("div"));
+    node.className = "bw-pa-toast";
+    document.body.appendChild(node);
+  }
+  node.textContent = message;
+  node.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { node.classList.remove("show"); }, 2200);
+}
+
+function copyText(text, ok, fail) {
+  function fallback() {
+    var input = document.createElement("textarea");
+    input.value = text;
+    input.style.cssText = "position:fixed;left:-9999px;top:0";
+    document.body.appendChild(input);
+    input.focus();
+    input.select();
+    var done = false;
+    try { done = document.execCommand("copy"); } catch (err) {}
+    input.remove();
+    return done;
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(ok, function() {
+      fallback() ? ok() : fail();
+    });
+  } else {
+    fallback() ? ok() : fail();
+  }
+}
+
+function loadAnnos() {
+  try {
+    var raw = JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
+    return Array.isArray(raw) ? raw.filter(function(item) { return item && item.id && item.selector; }) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function persist() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(annos));
+}
+
+function findAnno(id) {
+  return annos.filter(function(anno) { return anno.id === id; })[0] || null;
+}
+
+function block(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+}
+
+function colorToHex(value) {
+  if (!value || value === "transparent") return null;
+  var rgba = value.match(/rgba?\(([^)]+)\)/);
+  if (!rgba) return /^#[0-9a-fA-F]{6}$/.test(value) ? value : null;
+  var parts = rgba[1].split(",").map(function(part) { return part.trim(); });
+  if (parts.length === 4 && Number(parts[3]) === 0) return null;
+  return "#" + [0, 1, 2].map(function(index) {
+    var hex = Math.max(0, Math.min(255, parseInt(parts[index], 10) || 0)).toString(16);
+    return hex.length === 1 ? "0" + hex : hex;
+  }).join("");
+}
+
+function normalizeWeight(value) {
+  if (value === "normal") return "400";
+  if (value === "bold") return "700";
+  return String(parseInt(value, 10) || 400);
+}
+
+function pxNumber(value) {
+  return Math.max(0, Math.round(parseFloat(value) || 0));
+}
+
+function displayValue(value) {
+  return value == null || value === "" ? "transparent" : String(value);
+}
+
+function short(value, length) {
+  value = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  return value.length > length ? value.slice(0, length - 1) + "…" : value;
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value || {}));
+}
+
+function esc(value) {
+  return String(value == null ? "" : value).replace(/[&<>"']/g, function(char) {
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char];
+  });
+}
+
+function cssEscape(value) {
+  if (window.CSS && CSS.escape) return CSS.escape(value);
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, function(char) {
+    return "\\" + char.charCodeAt(0).toString(16) + " ";
+  });
+}
+
+window[NS] = {
+  toggle: toggle,
+  exportMarkdown: exportMarkdown,
+  clear: function() {
+    annos.forEach(restoreStored);
+    annos = [];
+    seq = 0;
+    persist();
+    renderAll();
+  }
+};
+
+applyAll();
+setEnabled(true);
+  </script>
+
+  <script>
+    (function() {
+      var source = document.getElementById("annotatorSource").textContent;
+      var bookmarklet = "javascript:" + encodeURIComponent("(function(){" + source + "\n})();");
+      var link = document.getElementById("bookmarklet");
+      var code = document.getElementById("bookmarkCode");
+      var warn = document.getElementById("clickWarn");
+      link.href = bookmarklet;
+      code.value = bookmarklet;
+
+      link.addEventListener("click", function(event) {
+        event.preventDefault();
+        warn.classList.add("show");
+        clearTimeout(window.__bwPaWarn);
+        window.__bwPaWarn = setTimeout(function() {
+          warn.classList.remove("show");
+        }, 2600);
+      });
+
+      document.getElementById("copyBookmark").addEventListener("click", function() {
+        copyText(code.value, function() {
+          alert("已复制。新建书签后，把代码粘贴到“网址 / URL”字段即可。");
+        }, function() {
+          code.focus();
+          code.select();
+          alert("自动复制失败，请手动复制文本框内容。");
+        });
+      });
+
+      Array.prototype.forEach.call(document.querySelectorAll("button"), attachTaffy);
+
+      function attachTaffy(node) {
+        var state = null;
+        node.addEventListener("pointerdown", function(event) {
+          if (event.button !== 0 || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+          state = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+          node.classList.remove("taffy-release");
+          node.classList.add("taffy-pull");
+          try { node.setPointerCapture(event.pointerId); } catch (err) {}
+        });
+        node.addEventListener("pointermove", function(event) {
+          if (!state || state.id !== event.pointerId) return;
+          var dx = event.clientX - state.x;
+          var dy = event.clientY - state.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 5) state.moved = true;
+          var pull = Math.min(44, dist);
+          var ux = dist ? dx / dist : 0;
+          var uy = dist ? dy / dist : 0;
+          var tension = pull / 44;
+          node.style.transform = "translate(" + (ux * pull * .14).toFixed(2) + "px," + (uy * pull * .14).toFixed(2) + "px) scale(" + (1 + tension * .055).toFixed(3) + "," + (1 - tension * .035).toFixed(3) + ")";
+          node.style.setProperty("--tail-x", (-ux * Math.min(11, pull * .24)).toFixed(2) + "px");
+          node.style.setProperty("--tail-y", (-uy * Math.min(11, pull * .24)).toFixed(2) + "px");
+        });
+        function release(event) {
+          if (!state || (event && state.id !== event.pointerId)) return;
+          node._suppressTaffyClick = state.moved;
+          state = null;
+          node.classList.remove("taffy-pull");
+          node.style.transform = "";
+          node.style.removeProperty("--tail-x");
+          node.style.removeProperty("--tail-y");
+          node.classList.add("taffy-release");
+          setTimeout(function() { node.classList.remove("taffy-release"); }, 620);
+        }
+        node.addEventListener("pointerup", release);
+        node.addEventListener("pointercancel", release);
+        node.addEventListener("click", function(event) {
+          if (!node._suppressTaffyClick) return;
+          node._suppressTaffyClick = false;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }, true);
+      }
+
+      function copyText(text, ok, fail) {
+        function fallback() {
+          code.focus();
+          code.select();
+          try { return document.execCommand("copy"); } catch (err) { return false; }
+        }
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(ok, function() {
+            fallback() ? ok() : fail();
+          });
+        } else {
+          fallback() ? ok() : fail();
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
