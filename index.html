@@ -41,15 +41,104 @@
     }
 
     body {
+      position: relative;
       margin: 0;
       min-height: 100vh;
       padding: 34px 28px 88px;
-      background: var(--bg);
+      overflow-x: hidden;
+      background:
+        linear-gradient(180deg, rgba(251, 251, 250, .58) 0%, rgba(251, 251, 250, .78) 36%, rgba(251, 251, 250, .96) 74%, var(--bg) 100%),
+        url("assets/dust2-a-background.jpg") center top / cover fixed no-repeat,
+        var(--bg);
     }
 
     main {
+      position: relative;
+      z-index: 2;
       width: min(1120px, 100%);
       margin: 0 auto;
+    }
+
+    .tactical-layer {
+      position: fixed;
+      z-index: 1;
+      inset: 18px;
+      pointer-events: none;
+      color: rgba(23, 23, 23, .58);
+      font: 700 10px/1.2 var(--mono);
+    }
+
+    .tactical-layer::before,
+    .tactical-layer::after {
+      content: "";
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      border-color: rgba(23, 23, 23, .3);
+      border-style: solid;
+    }
+
+    .tactical-layer::before {
+      top: 0;
+      left: 0;
+      border-width: 1px 0 0 1px;
+    }
+
+    .tactical-layer::after {
+      right: 0;
+      bottom: 0;
+      border-width: 0 1px 1px 0;
+    }
+
+    .hud-label,
+    .hud-coords {
+      position: absolute;
+      padding: 7px 9px;
+      border: 1px solid rgba(23, 23, 23, .22);
+      background: rgba(251, 251, 250, .68);
+      backdrop-filter: blur(6px);
+    }
+
+    .hud-label {
+      top: 14px;
+      right: 14px;
+    }
+
+    .hud-coords {
+      right: 14px;
+      bottom: 14px;
+      color: rgba(23, 23, 23, .48);
+    }
+
+    .crosshair {
+      position: absolute;
+      top: 31%;
+      right: 8%;
+      width: 13px;
+      height: 13px;
+      border: 1px solid rgba(23, 23, 23, .48);
+      border-radius: 50%;
+    }
+
+    .crosshair::before,
+    .crosshair::after {
+      content: "";
+      position: absolute;
+      background: rgba(23, 23, 23, .48);
+    }
+
+    .crosshair::before {
+      top: 5px;
+      left: -9px;
+      width: 29px;
+      height: 1px;
+    }
+
+    .crosshair::after {
+      top: -9px;
+      left: 5px;
+      width: 1px;
+      height: 29px;
     }
 
     .eyebrow {
@@ -345,9 +434,41 @@
       line-height: 1.75;
     }
 
+    .site-foot {
+      position: relative;
+      z-index: 2;
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 24px 0 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font: 11px/1.7 var(--mono);
+    }
+
+    .site-foot a {
+      color: var(--ink);
+      text-underline-offset: 3px;
+    }
+
     @media (max-width: 640px) {
       body {
         padding: 24px 16px 54px;
+        background-position: 62% top;
+        background-attachment: scroll;
+      }
+
+      .tactical-layer {
+        inset: 10px;
+      }
+
+      .hud-label {
+        top: 8px;
+        right: 8px;
+      }
+
+      .hud-coords,
+      .crosshair {
+        display: none;
       }
 
       .eyebrow {
@@ -387,6 +508,11 @@
   </style>
 </head>
 <body>
+  <div class="tactical-layer" aria-hidden="true">
+    <span class="hud-label">A SITE / ROUND 01</span>
+    <span class="hud-coords">DUST II // 35.9955 N</span>
+    <span class="crosshair"></span>
+  </div>
   <main>
     <p class="eyebrow"><img src="assets/ak47-logo.png" alt="AK47"></p>
     <h1>AK47</h1>
@@ -441,6 +567,10 @@
       </div>
     </section>
   </main>
+
+  <footer class="site-foot">
+    AK47 是非官方粉丝项目，与 Valve 无关。背景图片来源：<a href="https://media.steampowered.com/apps/csgo/images/dust2/1.htm" target="_blank" rel="noopener noreferrer">Valve / Steam Dust II media</a>。
+  </footer>
 
   <script type="text/plain" id="annotatorSource">
 var NS = "__BW_PROTO_ANNOTATOR__";

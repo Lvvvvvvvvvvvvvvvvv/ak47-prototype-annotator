@@ -16,3 +16,7 @@ AK47 是一个直接运行在浏览器里的轻量原型标注工具。它通过
 ## 本地打开
 
 直接双击 `index.html` 或 `原型标注工具-黑白复刻.html` 即可，无需安装依赖。
+
+## 素材声明
+
+AK47 是非官方粉丝项目，与 Valve 无关。Dust II 背景图片来源于 [Valve / Steam 官方媒体页](https://media.steampowered.com/apps/csgo/images/dust2/1.htm)。
