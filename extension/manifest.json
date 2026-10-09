@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Dsign 原型标注工具",
+  "version": "0.1.0",
+  "description": "在当前网页上用 Dsign 点选元素、记录修改意见与设计说明。",
+  "permissions": [
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "开启 / 关闭 Dsign 标注",
+    "default_icon": {
+      "16": "icons/kun.png",
+      "48": "icons/kun.png",
+      "128": "icons/kun.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/kun.png",
+    "48": "icons/kun.png",
+    "128": "icons/kun.png"
+  }
+}
